@@ -52,13 +52,13 @@ namespace WhitelistDiscordBot.Services
                 {
                     default:
 
-                        await s.Channel.SendMessageAsync($"An error occurred! Details: ```" + result.ToString() + "```");
+                        await s.Channel.SendMessageAsync($"Ett fel hände! Detaljer: ```" + result.ToString() + "```");
                         break;
                     case "UnknownCommand: Unknown command.":
 
                         await message.DeleteAsync();
 
-                        await s.Channel.SendMessageAsync($"Command not found! Use the command {prefix}help for a list of commands.");
+                        await s.Channel.SendMessageAsync($"Kommando inte funnet! Använd {prefix}help för en lista på alla kommandon.");
                         break;
                 }
             }

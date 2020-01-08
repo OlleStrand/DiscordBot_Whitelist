@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using MySql.Data.MySqlClient;
 using System.Diagnostics;
 using System.IO;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 
 namespace WhitelistDiscordBot.Services
 {
@@ -75,6 +77,8 @@ namespace WhitelistDiscordBot.Services
             }
         }
 
+
+        //Whitelisting
         public bool Whitelist(string hexID)
         {
             string query = $"INSERT INTO user_whitelist (identifier, whitelisted) VALUES('steam:{hexID}', '1')";
@@ -142,5 +146,118 @@ namespace WhitelistDiscordBot.Services
             }
             return false;
         }
+
+        //List Weapons
+        private List<Weapon> GetWeapons(string json)
+        {
+            List<Weapon> weapons = new List<Weapon>();
+
+            JArray jArray = JArray.Parse(json);
+            foreach (JObject root in jArray)
+            {
+                if ((string)root["name"] == "WEAPON_PETROLCAN")
+                    continue;
+
+                Weapon w1 = new Weapon
+                {
+                    Ammo = (int)root["ammo"],
+                    Name = (string)root["name"],
+                    Label = (string)root["label"]
+                };
+                //Console.WriteLine(w1.Ammo + ", " + w1.Name + ", " + w1.Label);
+                weapons.Add(w1);
+            }
+            return weapons;
+        }
+
+
+        public List<User> GetUsersWithWeapon(string weapon, string filterJob = "")
+        {
+            List<User> users = new List<User>();
+            string query = $"SELECT identifier, name, loadout, job, firstname, lastname FROM users WHERE loadout LIKE '%{weapon}%'";
+
+            //open connection
+            if (OpenConnection() == true)
+            {
+                MySqlCommand cmd = new MySqlCommand(query, connection);
+                MySqlDataReader dataReader = cmd.ExecuteReader();
+
+                while (dataReader.Read())
+                {
+                    if (dataReader["job"].ToString() != filterJob)
+                    {
+                        User user = new User
+                        {
+                            SteamName = dataReader["name"].ToString(),
+                            SteamID64 = dataReader["identifier"].ToString(),
+                            Name = $"{dataReader["firstname"].ToString()} {dataReader["lastname"].ToString()}",
+                            Job = dataReader["job"].ToString(),
+                            Weapons = GetWeapons(dataReader["loadout"].ToString())
+                        };
+
+                        users.Add(user);
+                    }
+                }
+                dataReader.Close();
+                CloseConnection();
+
+                return users;
+            }
+
+            return users;
+        }
+
+        public List<User> GetUsersWithWeapons(string filterJob = "")
+        {
+            List<User> users = new List<User>();
+            string query = $"SELECT identifier, name, loadout, job, firstname, lastname FROM users WHERE loadout != '[]'";
+
+            //open connection
+            if (OpenConnection() == true)
+            {
+                MySqlCommand cmd = new MySqlCommand(query, connection);
+                MySqlDataReader dataReader = cmd.ExecuteReader();
+
+                while (dataReader.Read())
+                {
+                    if (dataReader["job"].ToString() != filterJob)
+                    {
+                        User user = new User
+                        {
+                            SteamName = dataReader["name"].ToString(),
+                            SteamID64 = dataReader["identifier"].ToString(),
+                            Name = $"{dataReader["firstname"].ToString()} {dataReader["lastname"].ToString()}",
+                            Job = dataReader["job"].ToString(),
+                            Weapons = GetWeapons(dataReader["loadout"].ToString())
+                        };
+
+                        users.Add(user);
+                    }
+                }
+                dataReader.Close();
+                CloseConnection();
+
+                return users;
+            }
+
+            return users;
+        }
+    }
+
+    public struct Weapon
+    {
+        public int Ammo { get; set; }
+        public string Name { get; set; }
+        public string Label { get; set; }
+    }
+
+    public struct User
+    {
+        public string SteamName { get; set; }
+        public string SteamID64 { get; set; }
+        public string Name { get; set; }
+        public string Job { get; set; }
+
+        public List<Weapon> Weapons { get; set; }
     }
 }
