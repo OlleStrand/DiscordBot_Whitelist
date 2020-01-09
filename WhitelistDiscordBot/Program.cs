@@ -259,5 +259,53 @@ namespace WhitelistDiscordBot
                 }
             }
         }
+
+        [Command("clear")]
+        [Summary("Ta bort loadout på person")]
+        public async Task Clear(string databaseId, string weapon = "")
+        {
+            var user = Context.User as SocketGuildUser;
+            if (!user.GuildPermissions.Administrator)
+            {
+                var msg = await ReplyAsync("Du måste vara en admin för att lista användare");
+                await Task.Delay(3000);
+                await msg.DeleteAsync();
+
+                return;
+            }
+            DBConnect dBConnect = new DBConnect();
+
+            if (databaseId != "" || databaseId != null)
+            {
+                if (weapon != "")
+                {
+                    var msg = await ReplyAsync($"Clearing User {databaseId} from {weapon}");
+
+                    if (dBConnect.ClearLoadout(databaseId, weapon))
+                    {
+                        await ReplyAsync($"Användaren {databaseId} har nu förlorat {weapon}.");
+                    }
+                    else
+                    {
+                        await ReplyAsync($"Användaren {databaseId} hittades inte.");
+                        await msg.DeleteAsync();
+                    }
+                }
+                else
+                {
+                    var msg = await ReplyAsync($"Clearing User {databaseId}");
+
+                    if (dBConnect.ClearLoadout(databaseId))
+                    {
+                        await ReplyAsync($"Användaren {databaseId} har nu förlorat alla sina vapen.");
+                    }
+                    else
+                    {
+                        await ReplyAsync($"Användaren {databaseId} hittades inte.");
+                        await msg.DeleteAsync();
+                    }
+                }
+            }
+        }
     }
 }

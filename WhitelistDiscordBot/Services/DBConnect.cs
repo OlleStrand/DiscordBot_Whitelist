@@ -158,6 +158,8 @@ namespace WhitelistDiscordBot.Services
                 if ((string)root["name"] == "WEAPON_PETROLCAN")
                     continue;
 
+
+
                 Weapon w1 = new Weapon
                 {
                     Ammo = (int)root["ammo"],
@@ -242,6 +244,94 @@ namespace WhitelistDiscordBot.Services
 
             return users;
         }
+
+        public bool ClearLoadout(string databaseId)
+        {
+            string query = $"UPDATE users SET loadout='[]' WHERE identifier='{databaseId}'";
+
+            //open connection
+            if (OpenConnection() == true)
+            {
+                //create command and assign the query and connection from the constructor
+                MySqlCommand cmd = new MySqlCommand(query, connection);
+
+                //Execute command
+                cmd.ExecuteNonQuery();
+
+                //close connection
+                CloseConnection();
+
+                return true;
+            }
+
+            return false;
+        }
+        public bool ClearLoadout(string databaseId, string weapon)
+        {
+            string query = $"UPDATE user_whitelist SET loadout='[]' WHERE identifier='{databaseId}'";
+
+            if (HasWeapon(databaseId, weapon))
+            {
+                //open connection
+                if (OpenConnection() == true)
+                {
+                    //create command and assign the query and connection from the constructor
+                    MySqlCommand cmd = new MySqlCommand(query, connection);
+
+                    //Execute command
+                    cmd.ExecuteNonQuery();
+
+                    //close connection
+                    CloseConnection();
+
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private bool HasWeapon(string databaseId, string weapon)
+        {
+            string query = $"SELECT identifier, loadout FROM users WHERE identifier='{databaseId} AND loadout LIKE '%{weapon}%'";
+
+            //open connection
+            if (OpenConnection() == true)
+            {
+                MySqlCommand cmd = new MySqlCommand(query, connection);
+                MySqlDataReader dataReader = cmd.ExecuteReader();
+
+                while (dataReader.Read())
+                {
+                    dataReader.Close();
+                    CloseConnection();
+
+                    string newLoadout = RemoveWeaponFromJSON(dataReader["loadout"].ToString(), weapon);
+
+                    return true;
+                }
+                dataReader.Close();
+
+                CloseConnection();
+                return false;
+            }
+            return false;
+        }
+
+        private string RemoveWeaponFromJSON(string json, string weapon)
+        {
+            List<Weapon> weapons = GetWeapons(json);
+
+            for (int i = 0; i < weapons.Count; i++)
+            {
+                if (weapons[i].Name == weapon)
+                {
+                    weapons.RemoveAt(i);
+                }
+            }
+
+            return JsonConvert.SerializeObject(weapons);
+        }
+
     }
 
     public struct Weapon
@@ -249,6 +339,7 @@ namespace WhitelistDiscordBot.Services
         public int Ammo { get; set; }
         public string Name { get; set; }
         public string Label { get; set; }
+        public string[] Components { get; set; }
     }
 
     public struct User
